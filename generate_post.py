@@ -61,37 +61,52 @@ def slugify(text, date_str):
 def call_claude(topic):
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-    prompt = f"""너는 한국어 정보성 블로그의 전문 작성자야. 아래 주제로 애드센스 승인에 적합한
-블로그 글을 작성해줘.
+    year = datetime.date.today().year
+
+    prompt = f"""너는 한국어 정보성 블로그의 전문 작성자야. 아래 주제로 애드센스 승인 및
+구글 검색 상위노출(SEO)에 적합한 블로그 글을 작성해줘.
 
 주제: {topic}
+기준 연도: {year}년 (제도/금액/조건은 {year}년 기준으로 작성. 연도가 바뀌면 달라질 수 있는
+정보는 "{year}년 기준"이라고 명시)
 
-톤 & 스타일 (중요):
-- 정보성 글이지만 딱딱하고 건조한 설명체 금지. 친근하고 이해하기 쉬운 구어체 존댓말 사용
-- "~하더라구요", "~인 것 같아요", "~해보시는 걸 추천드려요" 같은 자연스러운 말투 섞기
-- 이런 고민 해보신 적 있으세요? 같은 공감형 후킹으로 인트로 시작
+제목 규칙:
+- 메인 키워드를 제목 앞쪽에 배치
+- 호기심을 유발하는 질문형이나 해결형 문장 (예: "2026년 실업급여 신청방법, 자발적 퇴사도 가능할까?")
+
+톤 & 스타일 (중요 - 구간별로 다르게):
+- 인트로/개인적인 팁을 전할 때 -> "~하더라구요", "~인 것 같아요" 같은 친근한 구어체
+- 핵심 절차·숫자·서류 안내 부분 -> "~합니다", "~하셔야 해요" 같은 확신을 주는 어투로 전환
+  (정보의 신뢰도가 중요한 부분이라 너무 애매한 말투는 피할 것)
+- 서론 첫 1~2문장 안에 메인 키워드가 자연스럽게 들어가야 함
 - 전문용어가 나오면 바로 옆에 괄호로 쉬운 설명을 덧붙이기
 - 각 소제목은 "그래서 뭘 하면 되는지" 결론부터 먼저 말하고 부가설명 이어가기
 
 요구사항:
-- 분량: 1000~1400자 내외의 실질적인 정보 (공백 포함)
-- 서론(공감형 후킹) - 본론(소제목 3~4개, 결론 먼저 말하는 구조) - 결론(체크리스트 느낌의 요약)
+- 분량: 1200~1500자 내외의 실질적인 정보 (공백 포함)
+- 서론(공감형 후킹, 키워드 포함) - 본론(소제목 3~4개) - 결론(요약) - Q&A(1~2개) 구조
+- 본론 중 최소 1개 소제목에는 핵심 절차/서류/조건을 정리한 체크리스트(3개 이상 항목) 포함
+- 본론 중 자연스러운 곳에, 공식 신청처(정부24, 국민연금공단, 홈택스 등 주제에 맞는 공식기관)를
+  확인해보라고 안내하는 문장을 1개 포함 (예: "정부24에서 본인이 지원대상인지 바로 확인해보실 수 있어요")
 - 의학적/법적 조언처럼 단정하지 말고 "전문가와 상담하세요" 같은 문구를 필요한 곳에 자연스럽게 포함
 - 과장된 효능/보장 표현 금지 (예: "무조건", "100% 효과")
 - 광고성 문구, 특정 제품 브랜드명 언급 금지
-- SEO를 고려해 자연스럽게 키워드를 반복 사용
 
 아래 JSON 형식으로만 응답해. 다른 설명이나 마크다운 코드블럭 없이 순수 JSON만 출력해.
 {{
-  "title": "글 제목 (30자 내외, 흥미를 끄는 문장형)",
+  "title": "글 제목 (30자 내외, 키워드 앞배치, 질문형/해결형)",
   "meta_description": "검색 결과에 노출될 요약 (80자 내외)",
   "sections": [
-    {{"heading": "소제목1", "body": "본문 내용 (HTML 태그 없이 순수 텍스트, 문단은 \\n\\n으로 구분)"}},
-    {{"heading": "소제목2", "body": "..."}},
+    {{"heading": "소제목1", "body": "본문 내용 (HTML 태그 없이 순수 텍스트, 문단은 \\n\\n으로 구분)", "checklist": null}},
+    {{"heading": "소제목2 (체크리스트 넣을 소제목)", "body": "본문 내용", "checklist": ["체크항목1", "체크항목2", "체크항목3"]}},
     {{"heading": "소제목3", "body": "..."}}
   ],
-  "intro": "서론 부분 텍스트",
+  "intro": "서론 부분 텍스트 (첫 1~2문장에 메인 키워드 포함)",
   "conclusion": "결론/요약 부분 텍스트",
+  "qna": [
+    {{"q": "독자가 가장 궁금해할 질문1", "a": "간결한 답변1"}},
+    {{"q": "질문2", "a": "답변2"}}
+  ],
   "tags": ["태그1", "태그2", "태그3"]
 }}"""
 
@@ -125,6 +140,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <p class="post-intro">{intro}</p>
 {sections_html}
 <div class="post-conclusion"><h2>정리하며</h2><p>{conclusion}</p></div>
+{qna_html}
 <p class="tags">{tags_html}</p>
 </main>
 <footer class="site-footer">
@@ -146,6 +162,21 @@ def render_post_html(post, date_str):
     for sec in post["sections"]:
         sections_html += f"<h2>{html_lib.escape(sec['heading'])}</h2>\n"
         sections_html += paragraphs_to_html(sec["body"]) + "\n"
+        checklist = sec.get("checklist")
+        if checklist:
+            items = "".join(f"<li>{html_lib.escape(item)}</li>" for item in checklist)
+            sections_html += f'<ul class="checklist">{items}</ul>\n'
+
+    qna_html = ""
+    qna_list = post.get("qna") or []
+    if qna_list:
+        qna_html = '<div class="qna"><h2>자주 묻는 질문</h2>\n'
+        for item in qna_list:
+            qna_html += (
+                f'<p class="qna-q">Q. {html_lib.escape(item.get("q", ""))}</p>'
+                f'<p class="qna-a">A. {html_lib.escape(item.get("a", ""))}</p>\n'
+            )
+        qna_html += "</div>\n"
 
     tags_html = " ".join(f"#{html_lib.escape(t)}" for t in post.get("tags", []))
 
@@ -157,6 +188,7 @@ def render_post_html(post, date_str):
         intro=html_lib.escape(post["intro"]),
         sections_html=sections_html,
         conclusion=html_lib.escape(post["conclusion"]),
+        qna_html=qna_html,
         tags_html=tags_html,
         year=datetime.datetime.now().year,
     )
