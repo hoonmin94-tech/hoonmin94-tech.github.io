@@ -2,8 +2,11 @@ name: Auto Blog Draft
 
 on:
   schedule:
+    # 한국시간(KST) 기준 08:00 / 11:00 / 14:00 / 17:00 / 20:00 실행 (UTC = KST-9)
     - cron: '0 23 * * *'
-    - cron: '0 4 * * *'
+    - cron: '0 2 * * *'
+    - cron: '0 5 * * *'
+    - cron: '0 8 * * *'
     - cron: '0 11 * * *'
   workflow_dispatch: {}
 
