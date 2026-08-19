@@ -54,6 +54,30 @@ body {
   background: #f7f7f7;
   border-radius: 8px;
 }
+.checklist {
+  background: #f0f7ff;
+  border-radius: 8px;
+  padding: 16px 16px 16px 36px;
+  margin: 12px 0;
+}
+.checklist li {
+  margin-bottom: 6px;
+}
+.qna {
+  margin-top: 28px;
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+.qna-q {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+.qna-a {
+  color: #444;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
 .tags {
   margin-top: 20px;
   color: #666;
