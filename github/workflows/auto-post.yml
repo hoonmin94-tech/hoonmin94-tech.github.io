@@ -1,0 +1,49 @@
+name: Auto Blog Draft
+
+on:
+  schedule:
+    - cron: '0 23 * * *'
+    - cron: '0 4 * * *'
+    - cron: '0 11 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 패키지 설치
+        run: pip install anthropic
+
+      - name: 초안 생성
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python generate_post.py
+
+      - name: 발행 대기 PR 생성
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "새 글 초안 자동 생성"
+          branch: auto-draft-${{ github.run_id }}
+          title: "새 글 초안 - 확인 후 Merge 해주세요"
+          body: |
+            AI가 자동으로 생성한 초안입니다.
+
+            - 내용 확인 후 이상 없으면 Merge pull request 버튼을 누르면 바로 사이트에 반영됩니다.
+            - 수정하고 싶은 부분이 있으면 이 PR의 Files changed 탭에서 직접 고칠 수 있어요.
+            - 마음에 안 들면 그냥 Close pull request로 버려도 됩니다 (사이트엔 반영 안 됨).
+          add-paths: |
+            posts/
+            index.html
+            posts.json
