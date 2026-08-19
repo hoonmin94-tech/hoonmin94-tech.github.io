@@ -1,0 +1,69 @@
+body {
+  font-family: -apple-system, "Malgun Gothic", sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px;
+  line-height: 1.7;
+  color: #222;
+}
+.site-header {
+  font-size: 1.4rem;
+  font-weight: bold;
+  padding: 16px 0;
+  border-bottom: 2px solid #333;
+  margin-bottom: 20px;
+}
+.site-header a {
+  color: inherit;
+  text-decoration: none;
+}
+.post-list {
+  list-style: none;
+  padding: 0;
+}
+.post-list li {
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+.post-list a {
+  text-decoration: none;
+  color: #1a1a1a;
+  font-size: 1.05rem;
+}
+.post-list .date {
+  color: #888;
+  font-size: 0.85rem;
+  margin-left: 8px;
+}
+.post h1 {
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+.post-date {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+.post h2 {
+  font-size: 1.2rem;
+  margin-top: 28px;
+}
+.post-conclusion {
+  margin-top: 32px;
+  padding: 16px;
+  background: #f7f7f7;
+  border-radius: 8px;
+}
+.tags {
+  margin-top: 20px;
+  color: #666;
+  font-size: 0.9rem;
+}
+.site-footer {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+  color: #999;
+  font-size: 0.85rem;
+  text-align: center;
+}
