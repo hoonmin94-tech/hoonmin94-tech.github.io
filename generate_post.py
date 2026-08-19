@@ -127,7 +127,10 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <div class="post-conclusion"><h2>정리하며</h2><p>{conclusion}</p></div>
 <p class="tags">{tags_html}</p>
 </main>
-<footer class="site-footer"><p>&copy; {year} {site_name}</p></footer>
+<footer class="site-footer">
+<p><a href="../about.html">소개</a> · <a href="../contact.html">문의</a> · <a href="../privacy.html">개인정보처리방침</a></p>
+<p>&copy; {year} {site_name}</p>
+</footer>
 </body>
 </html>
 """
@@ -174,7 +177,10 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 {items}
 </ul>
 </main>
-<footer class="site-footer"><p>&copy; {year} {site_name}</p></footer>
+<footer class="site-footer">
+<p><a href="about.html">소개</a> · <a href="contact.html">문의</a> · <a href="privacy.html">개인정보처리방침</a></p>
+<p>&copy; {year} {site_name}</p>
+</footer>
 </body>
 </html>
 """
