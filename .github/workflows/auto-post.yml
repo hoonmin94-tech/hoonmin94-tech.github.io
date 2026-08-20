@@ -2,12 +2,13 @@ name: Auto Blog Draft
 
 on:
   schedule:
-    # 한국시간(KST) 기준 08:00 / 11:00 / 14:00 / 17:00 / 20:00 실행 (UTC = KST-9)
-    - cron: '0 23 * * *'
-    - cron: '0 2 * * *'
-    - cron: '0 5 * * *'
-    - cron: '0 8 * * *'
-    - cron: '0 11 * * *'
+    # 한국시간(KST) 기준 08:07 / 11:07 / 14:07 / 17:07 / 20:07 실행 (UTC = KST-9)
+    # 정각(0분)은 GitHub 서버 혼잡으로 스킵될 수 있어서 7분 뒤로 밀어둠
+    - cron: '7 23 * * *'
+    - cron: '7 2 * * *'
+    - cron: '7 5 * * *'
+    - cron: '7 8 * * *'
+    - cron: '7 11 * * *'
   workflow_dispatch: {}
 
 permissions:
