@@ -194,6 +194,8 @@ POST_TEMPLATE = """<!DOCTYPE html>
 <title>{title} | {site_name}</title>
 <meta name="description" content="{meta_description}">
 <link rel="stylesheet" href="../style.css">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3094431823917692"
+     crossorigin="anonymous"></script>
 </head>
 <body>
 <header class="site-header"><a href="../index.html">{site_name}</a></header>
