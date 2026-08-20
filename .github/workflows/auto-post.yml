@@ -27,11 +27,12 @@ jobs:
           python-version: '3.11'
 
       - name: 패키지 설치
-        run: pip install anthropic
+        run: pip install anthropic requests
 
       - name: 초안 생성
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: python generate_post.py
 
       - name: 발행 대기 PR 생성
