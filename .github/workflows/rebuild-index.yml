@@ -1,0 +1,38 @@
+name: Rebuild Post Index
+
+# 초안 PR이 main에 merge되면(=posts/ 폴더에 새 글이 추가되면) 자동으로 실행됨.
+# index.html과 posts.json을 posts/ 폴더 전체 기준으로 처음부터 다시 만들어서 바로 main에 커밋함.
+# 사람이 쓴 글 내용은 전혀 건드리지 않고 "목록 페이지"만 다시 만드는 것이라 PR 검수 없이 바로 반영해도 안전함.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'posts/**'
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    # 이 워크플로우 자신이 만든 커밋으로 인한 무한 실행을 막기 위한 안전장치
+    if: github.event.head_commit.author.name != 'github-actions[bot]'
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: index.html / posts.json 재생성
+        run: python rebuild_index.py
+
+      - name: 변경사항 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html posts.json
+          git diff --cached --quiet && echo "변경 없음" || git commit -m "글 목록 자동 갱신 (index.html/posts.json)"
+          git push
