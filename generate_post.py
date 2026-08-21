@@ -1,9 +1,25 @@
 """
-자동 블로그 포스팅 스크립트
+자동 블로그 포스팅 스크립트 (충돌 방지 버전)
 - topics.txt 에서 주제를 하나 골라 Claude API로 글을 생성
-- posts/ 폴더에 개별 HTML 파일로 저장
-- index.html (글 목록 페이지) 자동 갱신
-- posts.json 에 이력을 남겨서 같은 주제 반복을 최대한 피함
+- posts/ 폴더에 개별 HTML 파일 "하나만" 새로 만듦
+
+*** 중요 변경사항 ***
+예전 버전은 이 스크립트가 index.html과 posts.json도 같이 고쳤는데, 그러다보니
+초안 PR이 여러 개 동시에 쌓이면(하루 5번 자동 실행되니까 검수가 늦어지면 자주 생김)
+두 PR이 똑같이 index.html/posts.json을 고치려고 해서 "Merge conflicts" 충돌이 났었음.
+그래서 이 버전부터는 이 스크립트가 posts/ 폴더에 새 글 파일 "하나만" 추가하고,
+index.html과 posts.json은 건드리지 않음 (그래서 PR끼리 절대 충돌 안 남).
+index.html/posts.json 갱신은 rebuild_index.py 가 main에 merge된 "이후"에 따로,
+자동으로(사람 검수 없이, 단순 목록 재생성이라 안전함) 처리함.
+새 글 파일 안에 <!--POST_META:...--> 주석으로 제목/주제/날짜 정보를 같이 넣어둬서
+rebuild_index.py 와, 다음번 주제 중복 방지(load_posts_meta)에 활용함.
+
+*** 추가로 고친 것: 날짜가 하루 밀리던 버그 ***
+GitHub Actions 서버는 시간대가 한국시간(KST)이 아니라 UTC라서, 예전 코드처럼
+datetime.date.today()를 그대로 쓰면 한국시간 새벽~아침 실행분은 날짜가 하루 전으로
+찍히는 문제가 있었음 (예: 한국시간 8/21 오전 8시 실행 -> UTC로는 아직 8/20 밤이라
+글 날짜가 "2026-08-20"으로 잘못 찍힘). 그래서 항상 한국시간(KST) 기준으로 날짜를
+계산하도록 고쳐둠.
 
 실행: python generate_post.py
 필요 환경변수: ANTHROPIC_API_KEY (필수), PEXELS_API_KEY (선택 - 없으면 이미지 없이 생성)
@@ -22,10 +38,15 @@ import requests
 # ---------- 설정 ----------
 TOPICS_FILE = "topics.txt"
 POSTS_DIR = "posts"
-POSTS_JSON = "posts.json"
-INDEX_FILE = "index.html"
+POSTS_JSON = "posts.json"  # 읽기 전용으로만 사용 (주제 중복 방지). 쓰기는 더이상 안 함.
 SITE_NAME = "생활 정보 블로그"  # 사이트 이름 - 원하는 대로 수정
 MODEL = "claude-sonnet-4-6"
+KST = datetime.timezone(datetime.timedelta(hours=9))
+
+
+def today_kst():
+    """서버 시간대(UTC)와 상관없이 항상 한국시간 기준 오늘 날짜를 돌려줌."""
+    return datetime.datetime.now(KST).date()
 
 # AI가 이 목록 중에서만 골라 쓰도록 해서, 존재하지 않는 URL을 지어내는 걸 방지
 OFFICIAL_SITES = {
@@ -58,34 +79,34 @@ def load_topics():
         return [line.strip() for line in f if line.strip()]
 
 
-def load_posts_meta():
+def load_recent_topics():
+    """최근 주제 목록을 posts.json에서 읽어옴 (있으면). 없거나 깨져있어도 그냥 빈 목록으로 진행."""
     if os.path.exists(POSTS_JSON):
-        with open(POSTS_JSON, encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(POSTS_JSON, encoding="utf-8") as f:
+                data = json.load(f)
+            return [p.get("topic", "") for p in data[-15:]]
+        except Exception:
+            return []
     return []
 
 
-def save_posts_meta(posts):
-    with open(POSTS_JSON, "w", encoding="utf-8") as f:
-        json.dump(posts, f, ensure_ascii=False, indent=2)
-
-
-def pick_topic(topics, posts_meta):
-    used_recent = {p["topic"] for p in posts_meta[-15:]}
+def pick_topic(topics, recent_topics):
+    used_recent = set(recent_topics)
     available = [t for t in topics if t not in used_recent]
     if not available:
         available = topics
     return random.choice(available)
 
 
-def slugify(text, date_str):
+def slugify(date_str):
     return f"{date_str}-{random.randint(1000, 9999)}"
 
 
 def call_claude(topic):
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-    year = datetime.date.today().year
+    year = today_kst().year
 
     prompt = f"""너는 한국어 정보성 블로그의 전문 작성자야. 아래 주제로 애드센스 승인 및
 구글 검색 상위노출(SEO)에 적합한 블로그 글을 작성해줘.
@@ -187,6 +208,7 @@ def fetch_image(query):
 # ---------- HTML 렌더링 ----------
 
 POST_TEMPLATE = """<!DOCTYPE html>
+<!--POST_META:{meta_json}-->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -224,7 +246,7 @@ def paragraphs_to_html(text):
     return "\n".join(f"<p>{html_lib.escape(p)}</p>" for p in parts)
 
 
-def render_post_html(post, date_str, image):
+def render_post_html(post, slug, topic, date_str, image):
     sections_html = ""
     for sec in post["sections"]:
         sections_html += f"<h2>{html_lib.escape(sec['heading'])}</h2>\n"
@@ -268,7 +290,13 @@ def render_post_html(post, date_str, image):
 
     tags_html = " ".join(f"#{html_lib.escape(t)}" for t in post.get("tags", []))
 
+    meta_json = json.dumps(
+        {"slug": slug, "title": post["title"], "topic": topic, "date": date_str},
+        ensure_ascii=True,
+    )
+
     return POST_TEMPLATE.format(
+        meta_json=meta_json,
         title=html_lib.escape(post["title"]),
         meta_description=html_lib.escape(post["meta_description"]),
         site_name=SITE_NAME,
@@ -280,43 +308,7 @@ def render_post_html(post, date_str, image):
         official_link_html=official_link_html,
         qna_html=qna_html,
         tags_html=tags_html,
-        year=datetime.datetime.now().year,
-    )
-
-
-INDEX_TEMPLATE = """<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{site_name}</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<header class="site-header">{site_name}</header>
-<main>
-<ul class="post-list">
-{items}
-</ul>
-</main>
-<footer class="site-footer">
-<p><a href="about.html">소개</a> · <a href="contact.html">문의</a> · <a href="privacy.html">개인정보처리방침</a></p>
-<p>&copy; {year} {site_name}</p>
-</footer>
-</body>
-</html>
-"""
-
-
-def render_index(posts_meta):
-    items = ""
-    for p in sorted(posts_meta, key=lambda x: x["date"], reverse=True):
-        items += (
-            f'<li><a href="posts/{p["slug"]}.html">{html_lib.escape(p["title"])}</a>'
-            f'<span class="date"> - {p["date"]}</span></li>\n'
-        )
-    return INDEX_TEMPLATE.format(
-        site_name=SITE_NAME, items=items, year=datetime.datetime.now().year
+        year=today_kst().year,
     )
 
 
@@ -326,34 +318,23 @@ def main():
     os.makedirs(POSTS_DIR, exist_ok=True)
 
     topics = load_topics()
-    posts_meta = load_posts_meta()
+    recent_topics = load_recent_topics()
 
-    topic = pick_topic(topics, posts_meta)
+    topic = pick_topic(topics, recent_topics)
     print(f"[선택된 주제] {topic}")
 
     post = call_claude(topic)
 
     image = fetch_image(post.get("image_query", topic))
 
-    today = datetime.date.today().isoformat()
-    slug = slugify(post["title"], today)
+    today = today_kst().isoformat()
+    slug = slugify(today)
 
-    html_out = render_post_html(post, today, image)
+    html_out = render_post_html(post, slug, topic, today, image)
     with open(os.path.join(POSTS_DIR, f"{slug}.html"), "w", encoding="utf-8") as f:
         f.write(html_out)
 
-    posts_meta.append({
-        "slug": slug,
-        "title": post["title"],
-        "topic": topic,
-        "date": today,
-    })
-    save_posts_meta(posts_meta)
-
-    with open(INDEX_FILE, "w", encoding="utf-8") as f:
-        f.write(render_index(posts_meta))
-
-    print(f"[완료] posts/{slug}.html 생성됨, index.html 갱신됨")
+    print(f"[완료] posts/{slug}.html 생성됨 (index.html/posts.json은 merge 후 자동 갱신됨)")
 
 
 if __name__ == "__main__":
