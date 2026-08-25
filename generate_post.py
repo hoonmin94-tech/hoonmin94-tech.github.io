@@ -243,7 +243,7 @@ POST_TEMPLATE = """<!DOCTYPE html>
 </main>
 <footer class="site-footer">
 <p><a href="../about.html">소개</a> · <a href="../contact.html">문의</a> · <a href="../privacy.html">개인정보처리방침</a></p>
-<p class="related-sites">함께 운영 중인 사이트: <a href="https://ichaniya.co.kr" target="_blank" rel="noopener">이차니야 육아정보</a></p>
+<p class="related-sites">함께 운영 중인 사이트: <a href="https://ichaniya.co.kr" target="_blank" rel="noopener">이차니야 육아정보</a> · <a href="https://blog.naver.com/hoonmin1994" target="_blank" rel="noopener">네이버 블로그</a></p>
 <p>&copy; {year} {site_name}</p>
 </footer>
 </body>
