@@ -15,11 +15,13 @@ import re
 import json
 import html as html_lib
 import datetime
+import email.utils
 
 POSTS_DIR = "posts"
 POSTS_JSON = "posts.json"
 INDEX_FILE = "index.html"
 SITEMAP_FILE = "sitemap.xml"
+RSS_FILE = "rss.xml"
 SITE_NAME = "생활 정보 블로그"
 SITE_URL = "https://hoonmin94-tech.github.io"
 KST = datetime.timezone(datetime.timedelta(hours=9))
@@ -45,6 +47,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{site_name}</title>
 <link rel="stylesheet" href="style.css">
+<link rel="alternate" type="application/rss+xml" title="{site_name}" href="rss.xml">
 </head>
 <body>
 <header class="site-header">{site_name}</header>
@@ -55,6 +58,7 @@ INDEX_TEMPLATE = """<!DOCTYPE html>
 </main>
 <footer class="site-footer">
 <p><a href="about.html">소개</a> · <a href="contact.html">문의</a> · <a href="privacy.html">개인정보처리방침</a></p>
+<p class="related-sites">함께 운영 중인 사이트: <a href="https://ichaniya.co.kr" target="_blank" rel="noopener">이차니야 육아정보</a></p>
 <p>&copy; {year} {site_name}</p>
 </footer>
 </body>
@@ -162,6 +166,46 @@ def render_sitemap(posts):
     return "\n".join(lines) + "\n"
 
 
+def render_rss(posts):
+    """네이버 서치어드바이저의 'RSS 제출' 기능에 쓸 rss.xml을 만든다.
+    RSS를 등록해두면 새 글이 올라올 때마다 네이버가 더 빠르게 알아채고 크롤링해간다.
+    (전체 글을 다 넣으면 파일이 계속 커지므로, 최신 20개만 넣음 - 일반적인 관행)"""
+    limited = posts[:20]
+    channel_link = f"{SITE_URL}/"
+    now_rfc822 = email.utils.format_datetime(datetime.datetime.now(KST))
+
+    items = []
+    for p in limited:
+        link = html_lib.escape(f"{SITE_URL}/posts/{p['slug']}.html")
+        title = html_lib.escape(html_lib.unescape(p["title"]))
+        try:
+            d = datetime.date.fromisoformat(p.get("date", ""))
+            pub_date = email.utils.format_datetime(
+                datetime.datetime(d.year, d.month, d.day, tzinfo=KST)
+            )
+        except (ValueError, TypeError):
+            pub_date = now_rfc822
+        items.append(
+            "  <item>\n"
+            f"    <title>{title}</title>\n"
+            f"    <link>{link}</link>\n"
+            f"    <guid>{link}</guid>\n"
+            f"    <pubDate>{pub_date}</pubDate>\n"
+            "  </item>"
+        )
+
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<rss version="2.0"><channel>\n'
+        f"  <title>{SITE_NAME}</title>\n"
+        f"  <link>{channel_link}</link>\n"
+        f"  <description>{SITE_NAME} 최신 글</description>\n"
+        f"  <lastBuildDate>{now_rfc822}</lastBuildDate>\n"
+        + "\n".join(items) +
+        "\n</channel></rss>\n"
+    )
+
+
 def main():
     posts = scan_posts()
     # 최신 글이 위로 오도록 날짜 내림차순, 같은 날짜면 slug 내림차순(대략 최근 생성 순)
@@ -176,7 +220,10 @@ def main():
     with open(SITEMAP_FILE, "w", encoding="utf-8") as f:
         f.write(render_sitemap(posts))
 
-    print(f"[완료] 글 {len(posts)}개 기준으로 index.html / posts.json / sitemap.xml 재생성함")
+    with open(RSS_FILE, "w", encoding="utf-8") as f:
+        f.write(render_rss(posts))
+
+    print(f"[완료] 글 {len(posts)}개 기준으로 index.html / posts.json / sitemap.xml / rss.xml 재생성함")
 
 
 if __name__ == "__main__":
