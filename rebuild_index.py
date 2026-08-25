@@ -28,6 +28,15 @@ H1_RE = re.compile(r"<h1>(.*?)</h1>", re.DOTALL)
 INDEX_TEMPLATE = """<!DOCTYPE html>
 <html lang="ko">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-CJJ7DZYG8Q"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){{dataLayer.push(arguments);}}
+  gtag('js', new Date());
+
+  gtag('config', 'G-CJJ7DZYG8Q');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{site_name}</title>
